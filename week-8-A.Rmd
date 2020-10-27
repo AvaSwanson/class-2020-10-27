@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(PPBDS.data)
 library(rstanarm)
 library(tidyverse)
+library(ggthemes)
 
 # Recall that Enos (2014) actually looks at a measure of change in attitude
 # toward immigration, rather than simply at the ending attitude. Let's create
@@ -29,27 +30,85 @@ Weeks 7, 8 and 9 are the core of the class. We have a question. We have some dat
 **Prompt:** Let's estimate and interpret three models. In each case, `att_chg` is the outcome variable, the thing we are trying to understand and explain. Use `stan_glm()` to create and print a model with `att_chg` (the dependent or outcome variable) as a function of the indicated independent (or predictor) variable. Do not use an intercept. In each case, write three sentences of interpretation, with a special focus on whether the model is predictive or causal. For causal models, indicate how you might estimate the causal effect.
 
 * `att_chg` as a function of `gender`
+```{r}
+fit_gender <- stan_glm(att_chg ~ gender - 1, 
+                       data = week_8,
+                       family = gaussian(),
+                       refresh = 0)
+
+# The estimate of median for male is -0.2 and female is 0.1. This means the
+# estimate of median ended more liberal for males and more conservative for
+# females.
+```
 
 
 * `att_chg` as a function of `liberal`
+```{r}
+fit_liberal <- stan_glm(att_chg ~ liberal - 1, 
+                        data = week_8,
+                        family = gaussian(),
+                        refresh = 0)
+
+# The estimate of median for liberals is 0.0 and non-liberals is -0.1. The 
+# median estimate showed no change for liberals and non-liberals ended more
+# liberal.
+```
 
 
 * `att_chg` as a function of `treatment`
+```{r}
+fit_treatment <-stan_glm(att_chg ~ treatment - 1, 
+                         data = week_8,
+                         family = gaussian(),
+                         refresh = 0)
 
-
-
-
+# The estimate of median for treated individuals is 0.4 and control individuals
+# is -0.4. This means the estimate of median ended more conservative for treated
+# individuals and more liberal for control individuals.
+```
 
 ## Scene 2
 
 **Prompt:** For the model with `att_chg` as a function of `treatment`, create posterior probability densities for the two important parameters. Write a paragraph interpreting the meaning of those posteriors. 
-
-
-
+```{r}
+fit_treatment %>%
+  as_tibble() %>% 
+  pivot_longer(cols = 1:2,
+               names_to = "treatment",
+               values_to  = "values") %>%
+  ggplot(aes(x = values, 
+             y = after_stat(count/sum(count)),
+             fill = treatment)) +
+  geom_histogram(alpha = 0.5,
+                 position = "identity",
+                 bins = 100) +
+  theme_classic() +
+  labs(title = "Posterior Probability Distribution",
+         subtitle = 
+         "Average change in attitude toward immigration on -12 to 12 scale",
+         x = "Average Attitude Change",
+         y = "Probability") +
+  scale_fill_discrete(name = "Parameter",
+                    labels = c("Control", "Treated"))
+```
 
 ## Scene 3
 
 **Prompt:** Create a plot of the the posterior for the average treatment effect. Write a paragraph interpreting the plot.
+```{r}
+fit_treatment %>%
+  as_tibble() %>% 
+  mutate(avg = treatmentTreated - treatmentControl) %>%
+  ggplot(aes(x = avg, 
+             y = after_stat(count/sum(count)))) +
+  geom_histogram(bins = 100) +
+  labs(title = "Posterior Probability Distribution",
+         subtitle = 
+         "Average treatment effect on immigration attitude",
+         x = "Average Attitude Change",
+         y = "Probability") +
+  theme_classic()
+```
 
 
 
